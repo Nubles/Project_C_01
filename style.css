@@ -41,9 +41,23 @@ body {
     padding: 20px;
 }
 
-#planetCanvas {
+.canvas-container {
+    position: relative;
+    width: 500px;
+    height: 500px;
+}
+
+#planetCanvas, #cloudCanvas {
     border: 1px solid #ccc;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
 }
 
 button {
@@ -51,6 +65,7 @@ button {
     border: 1px solid #ccc;
     background-color: #eee;
     cursor: pointer;
+    flex-grow: 1;
 }
 
 button:hover {

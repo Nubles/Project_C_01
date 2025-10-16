@@ -30,6 +30,11 @@
             </div>
 
             <div class="control-group">
+                <label for="terrain-detail">Terrain Detail</label>
+                <input type="range" id="terrain-detail" min="1" max="8" step="1" value="4">
+            </div>
+
+            <div class="control-group">
                 <label for="mountain-peaks">Mountain Peaks</label>
                 <input type="range" id="mountain-peaks" min="0" max="1" step="0.01" value="0.6">
             </div>
@@ -43,7 +48,10 @@
                 </select>
             </div>
 
-            <button id="generate-planet">Generate Planet</button>
+            <div class="action-buttons">
+                <button id="generate-planet">Generate Planet</button>
+                <button id="download-image">Download Image</button>
+            </div>
 
             <div class="share-container">
                 <label for="share-link">Share Link</label>
@@ -52,7 +60,10 @@
             </div>
         </div>
         <div class="display">
-            <canvas id="planetCanvas" width="500" height="500"></canvas>
+            <div class="canvas-container">
+                <canvas id="planetCanvas" width="500" height="500"></canvas>
+                <canvas id="cloudCanvas" width="500" height="500"></canvas>
+            </div>
         </div>
     </div>
     <script src="lib/noise.js"></script>
