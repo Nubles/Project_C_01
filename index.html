@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procedural Planet Generator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="controls">
+            <h1>Planet Controls</h1>
+
+            <div class="control-group">
+                <label for="seed">Planet Seed</label>
+                <div class="seed-container">
+                    <input type="number" id="seed" value="12345">
+                    <button id="randomize-seed">Randomize</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="ocean-level">Ocean Level</label>
+                <input type="range" id="ocean-level" min="0" max="1" step="0.01" value="0.25">
+            </div>
+
+            <div class="control-group">
+                <label for="terrain-roughness">Terrain Roughness</label>
+                <input type="range" id="terrain-roughness" min="0" max="1" step="0.01" value="0.5">
+            </div>
+
+            <div class="control-group">
+                <label for="mountain-peaks">Mountain Peaks</label>
+                <input type="range" id="mountain-peaks" min="0" max="1" step="0.01" value="0.6">
+            </div>
+
+            <div class="control-group">
+                <label for="planet-theme">Planet Theme</label>
+                <select id="planet-theme">
+                    <option value="classic-earth">Classic Earth</option>
+                    <option value="arid-world">Arid World</option>
+                    <option value="ice-planet">Ice Planet</option>
+                </select>
+            </div>
+
+            <button id="generate-planet">Generate Planet</button>
+
+            <div class="share-container">
+                <label for="share-link">Share Link</label>
+                <input type="text" id="share-link" readonly>
+                <button id="copy-link">Copy</button>
+            </div>
+        </div>
+        <div class="display">
+            <canvas id="planetCanvas" width="500" height="500"></canvas>
+        </div>
+    </div>
+    <script src="lib/noise.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
