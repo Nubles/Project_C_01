@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const copyLinkBtn = document.getElementById('copy-link');
 
     let noise;
-    let scene, camera, renderer, sphere, controls;
+    let scene, camera, renderer, planetSphere, controls;
 
     const colorThemes = {
         'classic-earth': {
@@ -50,20 +50,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const terrainDetail = parseInt(terrainDetailSlider.value);
         const mountainPeaks = parseFloat(mountainPeaksSlider.value);
 
-        const width = 500;
-        const height = 500;
+        const width = 512;
+        const height = 256;
         const data = new Uint8Array(width * height * 4);
 
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
-                const nx = x / width - 0.5;
-                const ny = y / height - 0.5;
+                // Map from 2D texture coords (u,v) to 3D sphere coords (px,py,pz)
+                const u = x / width;
+                const v = y / height;
+
+                const theta = v * Math.PI;
+                const phi = u * 2 * Math.PI;
+
+                // Match THREE.SphereGeometry's vertex generation
+                const px = -Math.cos(phi) * Math.sin(theta);
+                const py = Math.cos(theta);
+                const pz = Math.sin(phi) * Math.sin(theta);
 
                 let e = 0;
-                let frequency = terrainRoughness * 10;
+                let frequency = terrainRoughness * 8; // Base frequency for 3D noise
                 let amplitude = 1;
                 for (let i = 0; i < terrainDetail; i++) {
-                    e += amplitude * noise.simplex2(frequency * nx, frequency * ny);
+                    e += amplitude * noise.simplex3(frequency * px, frequency * py, frequency * pz);
                     frequency *= 2;
                     amplitude *= 0.5;
                 }
@@ -111,8 +120,8 @@ document.addEventListener('DOMContentLoaded', () => {
             initThree();
         }
 
-        sphere.material.map = texture;
-        sphere.material.needsUpdate = true;
+        planetSphere.material.map = texture;
+        planetSphere.material.needsUpdate = true;
     }
 
     function hexToRgb(hex) {
@@ -179,13 +188,17 @@ document.addEventListener('DOMContentLoaded', () => {
         camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
         camera.position.z = 1.5;
 
-        renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
-        renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+        canvas.width = 500;
+        canvas.height = 500;
+        renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+        renderer.setSize(canvas.width, canvas.height);
+        renderer.setClearColor( 0x000000, 0 );
 
-        const geometry = new THREE.SphereGeometry(0.5, 64, 64);
-        const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
-        sphere = new THREE.Mesh(geometry, material);
-        scene.add(sphere);
+        // Planet Sphere
+        const planetGeometry = new THREE.SphereGeometry(0.5, 64, 64);
+        const planetMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        planetSphere = new THREE.Mesh(planetGeometry, planetMaterial);
+        scene.add(planetSphere);
 
         controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
