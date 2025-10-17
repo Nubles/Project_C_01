@@ -1,8 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('planetCanvas');
-    const ctx = canvas.getContext('2d');
-    const cloudCanvas = document.getElementById('cloudCanvas');
-    const cloudCtx = cloudCanvas.getContext('2d');
 
     // Control elements
     const seedInput = document.getElementById('seed');
@@ -17,8 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const shareLinkInput = document.getElementById('share-link');
     const copyLinkBtn = document.getElementById('copy-link');
 
-    let noise, cloudNoise;
-    let cloudOffset = 0;
+    let noise;
+    let scene, camera, renderer, sphere, controls;
 
     const colorThemes = {
         'classic-earth': {
@@ -44,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    function generatePlanet() {
+    function generatePlanetData() {
         const seed = parseInt(seedInput.value);
         noise = new Noise(seed);
 
@@ -52,13 +49,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const terrainRoughness = parseFloat(terrainRoughnessSlider.value);
         const terrainDetail = parseInt(terrainDetailSlider.value);
         const mountainPeaks = parseFloat(mountainPeaksSlider.value);
-        const theme = colorThemes[planetThemeSelect.value];
 
-        updateUrlHash();
-
-        const width = canvas.width;
-        const height = canvas.height;
-        const imageData = ctx.createImageData(width, height);
+        const width = 500;
+        const height = 500;
+        const data = new Uint8Array(width * height * 4);
 
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
@@ -78,27 +72,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 e = Math.pow(e, mountainPeaks);
 
                 const index = (y * width + x) * 4;
-                let color;
+                const color = getColor(e, oceanLevel, planetThemeSelect.value);
 
-                if (e < oceanLevel) {
-                    color = hexToRgb(theme.water);
-                } else if (e < oceanLevel + 0.05) {
-                    color = hexToRgb(theme.coast);
-                } else if (e < 0.7) {
-                    color = hexToRgb(theme.land);
-                } else if (e < 0.9) {
-                    color = hexToRgb(theme.mountain);
-                } else {
-                    color = hexToRgb(theme.peak);
-                }
-
-                imageData.data[index] = color.r;
-                imageData.data[index + 1] = color.g;
-                imageData.data[index + 2] = color.b;
-                imageData.data[index + 3] = 255;
+                data[index] = color.r;
+                data[index + 1] = color.g;
+                data[index + 2] = color.b;
+                data[index + 3] = 255;
             }
         }
-        ctx.putImageData(imageData, 0, 0);
+        return { data, width, height };
+    }
+
+    function getColor(e, oceanLevel, themeName) {
+        const theme = colorThemes[themeName];
+        let color;
+
+        if (e < oceanLevel) {
+            color = hexToRgb(theme.water);
+        } else if (e < oceanLevel + 0.05) {
+            color = hexToRgb(theme.coast);
+        } else if (e < 0.7) {
+            color = hexToRgb(theme.land);
+        } else if (e < 0.9) {
+            color = hexToRgb(theme.mountain);
+        } else {
+            color = hexToRgb(theme.peak);
+        }
+        return color;
+    }
+
+    function generateAndRenderPlanet() {
+        updateUrlHash();
+        const planetData = generatePlanetData();
+        const texture = new THREE.DataTexture(planetData.data, planetData.width, planetData.height, THREE.RGBAFormat);
+        texture.needsUpdate = true;
+
+        if (!scene) {
+            initThree();
+        }
+
+        sphere.material.map = texture;
+        sphere.material.needsUpdate = true;
     }
 
     function hexToRgb(hex) {
@@ -146,58 +160,48 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     downloadBtn.addEventListener('click', () => {
-        const compositeCanvas = document.createElement('canvas');
-        compositeCanvas.width = canvas.width;
-        compositeCanvas.height = canvas.height;
-        const compositeCtx = compositeCanvas.getContext('2d');
-        compositeCtx.drawImage(canvas, 0, 0);
-        compositeCtx.drawImage(cloudCanvas, 0, 0);
-
-        const image = compositeCanvas.toDataURL('image/png');
+        renderer.render(scene, camera);
+        const image = renderer.domElement.toDataURL('image/png');
         const link = document.createElement('a');
         link.href = image;
         link.download = `planet-seed-${seedInput.value}.png`;
         link.click();
     });
 
-    generateBtn.addEventListener('click', generatePlanet);
+    generateBtn.addEventListener('click', generateAndRenderPlanet);
     randomizeSeedBtn.addEventListener('click', () => {
         randomizeSeed();
-        generatePlanet();
+        generateAndRenderPlanet();
     });
 
-    function animateClouds() {
-        const width = cloudCanvas.width;
-        const height = cloudCanvas.height;
-        const imageData = cloudCtx.createImageData(width, height);
+    function initThree() {
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+        camera.position.z = 1.5;
 
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                const nx = x / width - 0.5;
-                const ny = y / height - 0.5;
+        renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        renderer.setSize(canvas.clientWidth, canvas.clientHeight);
 
-                let e = cloudNoise.simplex2(4 * nx + cloudOffset, 4 * ny);
-                e = (1 + e) / 2; // Normalize to 0-1
+        const geometry = new THREE.SphereGeometry(0.5, 64, 64);
+        const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        sphere = new THREE.Mesh(geometry, material);
+        scene.add(sphere);
 
-                const index = (y * width + x) * 4;
-                if (e > 0.6) {
-                    imageData.data[index] = 255;
-                    imageData.data[index + 1] = 255;
-                    imageData.data[index + 2] = 255;
-                    imageData.data[index + 3] = (e - 0.6) * 255 * 2;
-                }
-            }
-        }
-        cloudCtx.putImageData(imageData, 0, 0);
-        cloudOffset += 0.002;
-        requestAnimationFrame(animateClouds);
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        animate();
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
     }
 
     // Initial generation
     if (!parseUrlHash()) {
         randomizeSeed();
     }
-    cloudNoise = new Noise(Math.random());
-    generatePlanet();
-    animateClouds();
+    generateAndRenderPlanet();
 });
