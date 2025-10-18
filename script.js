@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const planetThemeSelect = document.getElementById('planet-theme');
     const generateBtn = document.getElementById('generate-planet');
     const downloadBtn = document.getElementById('download-image');
+    const downloadHeightmapBtn = document.getElementById('download-heightmap');
     const shareLinkInput = document.getElementById('share-link');
     const copyLinkBtn = document.getElementById('copy-link');
 
@@ -177,6 +178,15 @@ document.addEventListener('DOMContentLoaded', () => {
         link.click();
     });
 
+    downloadHeightmapBtn.addEventListener('click', () => {
+        const heightmapData = generateHeightmapData();
+        const blob = new Blob([heightmapData], { type: 'application/octet-stream' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'heightmap.r16';
+        link.click();
+    });
+
     generateBtn.addEventListener('click', generateAndRenderPlanet);
     randomizeSeedBtn.addEventListener('click', () => {
         randomizeSeed();
@@ -204,6 +214,48 @@ document.addEventListener('DOMContentLoaded', () => {
         controls.enableDamping = true;
 
         animate();
+    }
+
+    function generateHeightmapData() {
+        const seed = parseInt(seedInput.value);
+        const noise = new Noise(seed);
+
+        const terrainRoughness = parseFloat(terrainRoughnessSlider.value);
+        const terrainDetail = parseInt(terrainDetailSlider.value);
+        const mountainPeaks = parseFloat(mountainPeaksSlider.value);
+
+        const width = 1009;
+        const height = 1009;
+        const data = new Uint16Array(width * height);
+
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const u = x / width;
+                const v = y / height;
+
+                const theta = v * Math.PI;
+                const phi = u * 2 * Math.PI;
+
+                const px = -Math.cos(phi) * Math.sin(theta);
+                const py = Math.cos(theta);
+                const pz = Math.sin(phi) * Math.sin(theta);
+
+                let e = 0;
+                let frequency = terrainRoughness * 8;
+                let amplitude = 1;
+                for (let i = 0; i < terrainDetail; i++) {
+                    e += amplitude * noise.simplex3(frequency * px, frequency * py, frequency * pz);
+                    frequency *= 2;
+                    amplitude *= 0.5;
+                }
+
+                e = (1 + e) / 2; // Normalize to 0-1
+                e = Math.pow(e, mountainPeaks);
+
+                data[y * width + x] = Math.floor(e * 65535);
+            }
+        }
+        return data;
     }
 
     function animate() {
