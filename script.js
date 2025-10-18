@@ -21,30 +21,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const colorThemes = {
         'classic-earth': {
             water: '#0000FF',
-            coast: '#32CD32',
-            land: '#228B22',
-            mountain: '#A0522D',
-            peak: '#FFFFFF'
+            desert: '#F0E68C',
+            grassland: '#9ACD32',
+            forest: '#228B22',
+            rocky: '#808080',
+            snow: '#FFFFFF'
         },
         'arid-world': {
             water: '#00008B',
-            coast: '#FFD700',
-            land: '#DAA520',
-            mountain: '#8B4513',
-            peak: '#A9A9A9'
+            desert: '#DAA520',
+            grassland: '#BDB76B',
+            forest: '#8B4513',
+            rocky: '#A9A9A9',
+            snow: '#D3D3D3'
         },
         'ice-planet': {
             water: '#ADD8E6',
-            coast: '#F0FFFF',
-            land: '#FFFFFF',
-            mountain: '#E0FFFF',
-            peak: '#FFFFFF'
+            desert: '#F0FFFF',
+            grassland: '#E0FFFF',
+            forest: '#FFFFFF',
+            rocky: '#B0C4DE',
+            snow: '#FFFFFF'
         }
     };
 
     function generatePlanetData() {
         const seed = parseInt(seedInput.value);
         noise = new Noise(seed);
+        const moistureNoise = new Noise(seed + 1); // Separate noise for moisture
 
         const oceanLevel = parseFloat(oceanLevelSlider.value);
         const terrainRoughness = parseFloat(terrainRoughnessSlider.value);
@@ -69,20 +73,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 const py = Math.cos(theta);
                 const pz = Math.sin(phi) * Math.sin(theta);
 
+                // Elevation (e)
                 let e = 0;
-                let frequency = terrainRoughness * 8; // Base frequency for 3D noise
+                let frequency = terrainRoughness * 8;
                 let amplitude = 1;
                 for (let i = 0; i < terrainDetail; i++) {
                     e += amplitude * noise.simplex3(frequency * px, frequency * py, frequency * pz);
                     frequency *= 2;
                     amplitude *= 0.5;
                 }
-
                 e = (1 + e) / 2; // Normalize to 0-1
                 e = Math.pow(e, mountainPeaks);
 
+                // Moisture (m)
+                let m = 0;
+                let mFrequency = terrainRoughness * 2; // Different settings for moisture
+                let mAmplitude = 1;
+                for (let i = 0; i < terrainDetail; i++) {
+                    m += mAmplitude * moistureNoise.simplex3(mFrequency * px, mFrequency * py, mFrequency * pz);
+                    mFrequency *= 2;
+                    mAmplitude *= 0.5;
+                }
+                m = (1 + m) / 2; // Normalize to 0-1
+
+
                 const index = (y * width + x) * 4;
-                const color = getColor(e, oceanLevel, planetThemeSelect.value);
+                const color = getColor(e, m, oceanLevel, planetThemeSelect.value);
 
                 data[index] = color.r;
                 data[index + 1] = color.g;
@@ -93,22 +109,23 @@ document.addEventListener('DOMContentLoaded', () => {
         return { data, width, height };
     }
 
-    function getColor(e, oceanLevel, themeName) {
+    function getColor(e, m, oceanLevel, themeName) {
         const theme = colorThemes[themeName];
         let color;
 
         if (e < oceanLevel) {
-            color = hexToRgb(theme.water);
-        } else if (e < oceanLevel + 0.05) {
-            color = hexToRgb(theme.coast);
-        } else if (e < 0.7) {
-            color = hexToRgb(theme.land);
-        } else if (e < 0.9) {
-            color = hexToRgb(theme.mountain);
-        } else {
-            color = hexToRgb(theme.peak);
+            return hexToRgb(theme.water || '#0000FF');
         }
-        return color;
+
+        // Above ocean level
+        if (e > 0.7) { // High elevation
+            if (m < 0.5) return hexToRgb(theme.rocky || '#808080');
+            else return hexToRgb(theme.snow || '#FFFFFF');
+        } else { // Mid-low elevation
+            if (m < 0.3) return hexToRgb(theme.desert || '#F0E68C');
+            else if (m < 0.6) return hexToRgb(theme.grassland || '#9ACD32');
+            else return hexToRgb(theme.forest || '#228B22');
+        }
     }
 
     function generateAndRenderPlanet() {
