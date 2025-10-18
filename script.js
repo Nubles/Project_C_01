@@ -25,7 +25,8 @@ document.addEventListener('DOMContentLoaded', () => {
             grassland: '#9ACD32',
             forest: '#228B22',
             rocky: '#808080',
-            snow: '#FFFFFF'
+            snow: '#FFFFFF',
+            swamp: '#2E4B46'
         },
         'arid-world': {
             water: '#00008B',
@@ -33,7 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
             grassland: '#BDB76B',
             forest: '#8B4513',
             rocky: '#A9A9A9',
-            snow: '#D3D3D3'
+            snow: '#D3D3D3',
+            swamp: '#556B2F'
         },
         'ice-planet': {
             water: '#ADD8E6',
@@ -41,7 +43,8 @@ document.addEventListener('DOMContentLoaded', () => {
             grassland: '#E0FFFF',
             forest: '#FFFFFF',
             rocky: '#B0C4DE',
-            snow: '#FFFFFF'
+            snow: '#FFFFFF',
+            swamp: '#66CDAA'
         }
     };
 
@@ -111,21 +114,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getColor(e, m, oceanLevel, themeName) {
         const theme = colorThemes[themeName];
-        let color;
 
         if (e < oceanLevel) {
             return hexToRgb(theme.water || '#0000FF');
         }
 
-        // Above ocean level
-        if (e > 0.7) { // High elevation
+        // High elevation
+        if (e > 0.7) {
             if (m < 0.5) return hexToRgb(theme.rocky || '#808080');
             else return hexToRgb(theme.snow || '#FFFFFF');
-        } else { // Mid-low elevation
-            if (m < 0.3) return hexToRgb(theme.desert || '#F0E68C');
-            else if (m < 0.6) return hexToRgb(theme.grassland || '#9ACD32');
-            else return hexToRgb(theme.forest || '#228B22');
         }
+
+        // Low elevation, high moisture = Swamp
+        if (e < oceanLevel + 0.08 && m > 0.6) {
+            return hexToRgb(theme.swamp || '#2E4B46');
+        }
+
+        // Default biomes based on moisture
+        if (m < 0.3) return hexToRgb(theme.desert || '#F0E68C');
+        else if (m < 0.6) return hexToRgb(theme.grassland || '#9ACD32');
+        else return hexToRgb(theme.forest || '#228B22');
     }
 
     function generateAndRenderPlanet() {
